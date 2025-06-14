@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+    <!-- Example replacer
+    <ReplaceLib.ReplacerDef>
+        <defName>ReplaceLib_ExampleReplacer</defName>
+        <replacers>
+            <li>
+                <replace>Gun_BoltActionRifle</replace>
+                <with>Gun_Revolver</with>
+            </li>
+        </replacers>
+    </ReplaceLib.ReplacerDef>
+-->
+</Defs>
