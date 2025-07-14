@@ -77,43 +77,81 @@ namespace ReplaceLib
 			}
 		}
 
-		public static void ProcessRecipes()
-		{
-			var defs = DefDatabase<RecipeDef>.AllDefsListForReading.ListFullCopy();
-			var processedRecipes = new HashSet<RecipeDef>();
-			foreach (var originalRecipe in defs)
-			{
-				if (processedRecipes.Any(x => x.label == originalRecipe.label && x.products.Count == 1 && originalRecipe.products.Count == 1
-					&& x.ProducedThingDef == originalRecipe.ProducedThingDef && x.products[0].count == originalRecipe.products[0].count))
-				{
-					DefDatabase<RecipeDef>.Remove(originalRecipe);
-					originalRecipe.ClearRemovedRecipesFromRecipeUsers();
-				}
-				processedRecipes.Add(originalRecipe);
-			}
-		}
+        public static void ProcessRecipes()
+        {
+            var defs = DefDatabase<RecipeDef>.AllDefsListForReading.ListFullCopy();
+            var processedRecipes = new List<RecipeDef>();
 
-		public static void ClearRemovedRecipesFromRecipeUsers(this RecipeDef recipeDef)
-		{
-			if (recipeDef.recipeUsers != null)
-			{
-				foreach (var recipeUser in recipeDef.recipeUsers)
-				{
-					if (recipeUser.allRecipesCached != null)
-					{
-						for (int i = recipeUser.allRecipesCached.Count - 1; i >= 0; i--)
-						{
-							if (recipeUser.allRecipesCached[i] == recipeDef)
-							{
-								recipeUser.allRecipesCached.RemoveAt(i);
-							}
-						}
-					}
-				}
-			}
-		}
+            foreach (var originalRecipe in defs)
+            {
+                bool isDuplicate = false;
+                foreach (var processedRecipe in processedRecipes)
+                {
+                    if (AreRecipesDuplicate(originalRecipe, processedRecipe))
+                    {
+                        if (RecipeUsersAreSame(originalRecipe, processedRecipe))
+                        {
+                            isDuplicate = true;
+                            break;
+                        }
+                    }
+                }
 
-		public static Dictionary<BuildableDef, bool> cachedSpawnableResults = new Dictionary<BuildableDef, bool>();
+                if (isDuplicate)
+                {
+                    DefDatabase<RecipeDef>.Remove(originalRecipe);
+                    originalRecipe.ClearRemovedRecipesFromRecipeUsers();
+                }
+                else
+                {
+                    processedRecipes.Add(originalRecipe);
+                }
+            }
+        }
+
+        private static bool AreRecipesDuplicate(RecipeDef recipeA, RecipeDef recipeB)
+        {
+            if (recipeA.label != recipeB.label) return false;
+            if (recipeA.products.Count != 1 || recipeB.products.Count != 1) return false;
+            if (recipeA.ProducedThingDef != recipeB.ProducedThingDef) return false;
+            if (recipeA.products[0].count != recipeB.products[0].count) return false;
+            return true;
+        }
+
+        private static bool RecipeUsersAreSame(RecipeDef recipeA, RecipeDef recipeB)
+        {
+            if (recipeA.recipeUsers == null && recipeB.recipeUsers == null) return true;
+            if (recipeA.recipeUsers == null || recipeB.recipeUsers == null) return false;
+
+            if (recipeA.recipeUsers.Count != recipeB.recipeUsers.Count) return false;
+
+            HashSet<ThingDef> usersA = new HashSet<ThingDef>(recipeA.recipeUsers);
+            HashSet<ThingDef> usersB = new HashSet<ThingDef>(recipeB.recipeUsers);
+            return usersA.SetEquals(usersB);
+        }
+
+
+        public static void ClearRemovedRecipesFromRecipeUsers(this RecipeDef recipeDef)
+        {
+            if (recipeDef.recipeUsers != null)
+            {
+                foreach (var recipeUser in recipeDef.recipeUsers)
+                {
+                    if (recipeUser.allRecipesCached != null)
+                    {
+                        for (int i = recipeUser.allRecipesCached.Count - 1; i >= 0; i--)
+                        {
+                            if (recipeUser.allRecipesCached[i] == recipeDef)
+                            {
+                                recipeUser.allRecipesCached.RemoveAt(i);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static Dictionary<BuildableDef, bool> cachedSpawnableResults = new Dictionary<BuildableDef, bool>();
 		public static bool IsSpawnable(this BuildableDef def)
 		{
 			if (!cachedSpawnableResults.TryGetValue(def, out bool result))
